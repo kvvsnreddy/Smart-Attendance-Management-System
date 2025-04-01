@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Attendance Management System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f4f4f9;
+        }
+
+        .container {
+            text-align: center;
+            background: #fff;
+            padding: 20px 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        video {
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+            color: #fff;
+            background-color: #007bff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .status {
+            margin-top: 20px;
+            font-size: 18px;
+            color: #28a745;
+        }
+
+        .instructions {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #555;
+            text-align: left;
+        }
+
+        .instructions ul {
+            padding-left: 20px;
+        }
+
+        input[type="text"] {
+            margin-top: 20px;
+            padding: 10px;
+            font-size: 16px;
+            width: calc(100% - 22px);
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Smart Attendance Management System</h1>
+        <div class="instructions">
+            <p><strong>Instructions:</strong></p>
+            <ul>
+                <li>Click "Start Face Recognition" to mark attendance.</li>
+                <li>To add a new person, enter their name and click "Register New Person."</li>
+            </ul>
+        </div>
+        <video id="video" autoplay></video>
+        <input type="text" id="nameInput" placeholder="Enter person's name" />
+        <button id="registerButton">Register New Person</button>
+        <button id="startButton">Start Face Recognition</button>
+        <div class="status" id="status"></div>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const startButton = document.getElementById('startButton');
+        const registerButton = document.getElementById('registerButton');
+        const nameInput = document.getElementById('nameInput');
+        const statusDiv = document.getElementById('status');
+
+        // Access the webcam
+        async function setupCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: true
+                });
+                video.srcObject = stream;
+            } catch (error) {
+                console.error('Error accessing the camera:', error);
+                alert('Unable to access the camera. Please check your permissions.');
+            }
+        }
+
+        // Capture image from video stream
+        function captureImage() {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            return canvas.toDataURL('image/jpeg');
+        }
+
+        // Register a new person
+        async function registerPerson(name, image) {
+            statusDiv.textContent = 'Registering new person...';
+            statusDiv.style.color = '#ffc107'; // Yellow for processing state
+
+            try {
+                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name,
+                        image
+                    }),
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    statusDiv.textContent = `New person "${name}" registered successfully!`;
+                    statusDiv.style.color = '#28a745'; // Green for success
+                } else {
+                    statusDiv.textContent = 'Failed to register person. Try again.';
+                    statusDiv.style.color = '#dc3545'; // Red for failure
+                }
+            } catch (error) {
+                console.error('Error communicating with the server:', error);
+                statusDiv.textContent = 'Server error. Please try again later.';
+                statusDiv.style.color = '#dc3545'; // Red for failure
+            }
+        }
+
+        // Event listener for the register button
+        registerButton.addEventListener('click', () => {
+            const name = nameInput.value.trim();
+            if (!name) {
+                alert('Please enter a name.');
+                return;
+            }
+
+            const image = captureImage();
+            registerPerson(name, image);
+        });
+
+        // Simulate face recognition logic and send data to backend
+        async function startFaceRecognition() {
+            statusDiv.textContent = 'Scanning face...';
+            statusDiv.style.color = '#ffc107'; // Yellow for processing state
+
+            const image = captureImage();
+
+            // Send image data to backend for processing
+            try {
+                const response = await fetch('/api/attendance', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        image
+                    }),
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    statusDiv.textContent = 'Attendance marked successfully!';
+                    statusDiv.style.color = '#28a745'; // Green for success
+                } else {
+                    statusDiv.textContent = 'Failed to mark attendance. Try again.';
+                    statusDiv.style.color = '#dc3545'; // Red for failure
+                }
+            } catch (error) {
+                console.error('Error communicating with the server:', error);
+                statusDiv.textContent = 'Server error. Please try again later.';
+                statusDiv.style.color = '#dc3545'; // Red for failure
+            }
+        }
+
+        // Event listener for the start button
+        startButton.addEventListener('click', () => {
+            startFaceRecognition();
+        });
+
+        // Initialize the camera on page load
+        setupCamera();
+    </script>
+</body>
+
+</html>
