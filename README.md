@@ -50,3 +50,13 @@ The **Smart Attendance Management System** uses a webcam to capture live video, 
    ```bash
    git clone https://github.com/your-username/smart-attendance-system.git
    cd smart-attendance-system
+
+ ## Install the required libraries:
+
+pip install opencv-python
+pip install opencv-python
+pip install face-recognition
+pip install numpy
+pip install pandas
+pip install sqlite3
+``
